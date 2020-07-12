@@ -65,7 +65,7 @@ start_daemon()
 			ANNOUNCE=
 			;;
 		--background)
-			BACKGROUND='--background'
+			BACKGROUND='-b'
 			;;
 		--check) shift
 			CHECK="$1"
@@ -79,8 +79,8 @@ start_daemon()
 			LOCKFILE="$1"
 			;;
 		--make-pidfile)
-			BACKGROUND='--background'
-			MAKE_PIDFILE='--make-pidfile'
+			BACKGROUND='-b'
+			MAKE_PIDFILE='-m'
 			;;
 		--name) shift
 			CMDNAME="$1"
@@ -135,20 +135,23 @@ start_daemon()
 	# directories may be gone while the daemon is still running.
 	local HOME='' TMP='' TMPDIR=''
 
-	FLAGS="--start -N $NICE"
-	if [ -n "$CMDNAME" ]; then
-		FLAGS="$FLAGS --startas $WHICH --name $CMDNAME"
-	elif [ -n "$CHECK" ]; then
-		FLAGS="$FLAGS --exec $CHECK --startas $WHICH"
-	else
-		FLAGS="$FLAGS --exec $WHICH"
+	FLAGS="-S"
+	if [ start-stop-daemon -h 2>&1 | grep -- -N ]; then
+		FLAGS="$FLAGS -N $NICE"
 	fi
-	[ -z "$PIDFILE" ] || FLAGS="$FLAGS --pidfile $PIDFILE"
+	if [ -n "$CMDNAME" ]; then
+		FLAGS="$FLAGS -a $WHICH -n $CMDNAME"
+	elif [ -n "$CHECK" ]; then
+		FLAGS="$FLAGS -x $CHECK -a $WHICH"
+	else
+		FLAGS="$FLAGS -x $WHICH"
+	fi
+	[ -z "$PIDFILE" ] || FLAGS="$FLAGS -p $PIDFILE"
 	[ -z "$BACKGROUND" ] || FLAGS="$FLAGS $BACKGROUND"
 	[ -z "$MAKE_PIDFILE" ] || FLAGS="$FLAGS $MAKE_PIDFILE"
 
 	# Is it running at all?
-	start-stop-daemon $FLAGS --test > /dev/null
+	start-stop-daemon $FLAGS -t > /dev/null
 	STATUS=$?
 
 	if [ $STATUS != 0 ]; then
